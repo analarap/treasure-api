@@ -24,4 +24,7 @@ public class Message {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dateCreation;
+
+    @Column(nullable = false)
+    private boolean read = false;
 }
