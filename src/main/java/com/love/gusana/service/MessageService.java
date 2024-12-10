@@ -6,6 +6,7 @@ import com.love.gusana.model.Message;
 import com.love.gusana.repository.MessageRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,8 +26,10 @@ public class MessageService {
         if (message.getAuthor() == null || message.getAuthor().isEmpty()) {
             throw new InvalidRequestException("The message's author can't be empty.");
         }
+        message.setDateCreation(LocalDateTime.now());
         return messageRepository.save(message);
     }
+
 
     public List<Message> listAll() {
         List<Message> messages = messageRepository.findAll();
