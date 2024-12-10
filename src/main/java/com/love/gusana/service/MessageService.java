@@ -1,5 +1,7 @@
 package com.love.gusana.service;
 
+import com.love.gusana.exception.InvalidRequestException;
+import com.love.gusana.exception.ResourceNotFoundException;
 import com.love.gusana.model.Message;
 import com.love.gusana.repository.MessageRepository;
 import org.springframework.stereotype.Service;
@@ -16,40 +18,56 @@ public class MessageService {
         this.messageRepository = messageRepository;
     }
 
-    public Message saveMessage(Message message){
+    public Message saveMessage(Message message) {
+        if (message.getContent() == null || message.getContent().isEmpty()) {
+            throw new InvalidRequestException("The message's content can't be empty.");
+        }
+        if (message.getAuthor() == null || message.getAuthor().isEmpty()) {
+            throw new InvalidRequestException("The message's author can't be empty.");
+        }
         return messageRepository.save(message);
     }
 
-    public List<Message> listAll(){
-        return messageRepository.findAll();
+    public List<Message> listAll() {
+        List<Message> messages = messageRepository.findAll();
+        if (messages.isEmpty()) {
+            throw new ResourceNotFoundException("No messages found.");
+        }
+        return messages;
     }
 
-    public Optional<Message> findById(Long id){
-        return messageRepository.findById(id);
+    public Optional<Message> findById(Long id) {
+        return Optional.ofNullable(messageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Message with id " + id + " not found.")));
     }
 
-    public Optional<Message> updateMessage(Long id, Message updatedMessage){
-        return messageRepository.findById(id).map(messageExisting -> {
-            messageExisting.setContent(updatedMessage.getContent());
-            messageExisting.setAuthor(updatedMessage.getAuthor());
 
-            return messageRepository.save(messageExisting);
-        });
+    public Optional<Message> updateMessage(Long id, Message updatedMessage) {
+        if (updatedMessage.getContent() == null || updatedMessage.getContent().isEmpty()) {
+            throw new InvalidRequestException("The updated message's content can't be empty.");
+        }
+
+        return messageRepository.findById(id).map(existingMessage -> {
+                    existingMessage.setContent(updatedMessage.getContent());
+                    existingMessage.setAuthor(updatedMessage.getAuthor());
+                    return messageRepository.save(existingMessage);
+                }).map(updated -> Optional.of(updated))
+                .orElseThrow(() -> new ResourceNotFoundException("Message with id " + id + " not found."));
     }
 
-    public Optional<Message> searchAndMarkAsRead(Long id){
-        Optional<Message> message = messageRepository.findById(id);
-        message.ifPresent(msg -> messageRepository.markAsread(id));
-        return message;
+
+    public Optional<Message> searchAndMarkAsRead(Long id) {
+        Message message = messageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Message with id " + id + " not found."));
+        messageRepository.markAsread(id);
+        return Optional.of(message);
     }
 
-    public boolean deleteMessage(Long id){
-        if (messageRepository.existsById(id)){
+    public boolean deleteMessage(Long id) {
+        if (messageRepository.existsById(id)) {
             messageRepository.deleteById(id);
             return true;
         }
-        return false;
+        throw new ResourceNotFoundException("Message with id " + id + " not found.");
     }
-
-
 }
